@@ -24,20 +24,20 @@ func (repo *addressRepo) GetAddressById(id int) (*models.Address, error) {
 	return &address, nil
 }
 
-func (repo *addressRepo) GetCityById(id int) (*models.City, error) {
+func (repo *addressRepo) GetCityByName(name string) (*models.City, error) {
 	var city models.City
 
-	if err := repo.db.First(&city, "id=?", id).Error; err != nil {
+	if err := repo.db.First(&city, "city=?", name).Error; err != nil {
 		return &models.City{}, err
 	}
 
 	return &city, nil
 }
 
-func (repo *addressRepo) GetCountryById(id int) (*models.Country, error) {
+func (repo *addressRepo) GetCountryByName(name string) (*models.Country, error) {
 	var country models.Country
 
-	if err := repo.db.First(&country, "id=?", id).Error; err != nil {
+	if err := repo.db.First(&country, "country=?", name).Error; err != nil {
 		return &models.Country{}, err
 	}
 

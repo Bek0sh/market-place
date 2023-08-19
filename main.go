@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/Bek0sh/market-place/pkg/config"
 	"github.com/Bek0sh/market-place/pkg/controllers"
 	"github.com/Bek0sh/market-place/pkg/db"
@@ -18,14 +20,19 @@ var authCont controllers.AuthController
 var addressCont controllers.AddressController
 
 func init() {
-	cfg, _ := config.LoadConfig()
+	cfg, err := config.LoadConfig(".")
+
+	if err != nil {
+		log.Println("failed to load config")
+		log.Fatal(err.Error())
+	}
 	db.Connect(cfg)
 
 	authRepo = repository.NewauthRepository(db.DB)
 	addressRepo = repository.NewAddressRepository(db.DB)
 	marketRepo = repository.NewMarketRepository(db.DB)
 
-	authCont = *controllers.NewAuthController(authRepo)
+	authCont = *controllers.NewAuthController(authRepo, addressRepo)
 	addressCont = *controllers.NewAddressController(addressRepo)
 }
 

@@ -35,7 +35,7 @@ func CheckUser() gin.HandlerFunc {
 			return
 		}
 
-		config, _ := config.LoadConfig()
+		config, _ := config.LoadConfig(".")
 
 		_, err = utils.VerifyToken(accessToken, config.AccessTokenPublicKey)
 

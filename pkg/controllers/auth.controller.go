@@ -11,14 +11,15 @@ import (
 )
 
 type AuthController struct {
-	repo irepository.AuthRepoInterface
+	repo        irepository.AuthRepoInterface
+	addressRepo irepository.AddressRepoInterface
 }
 
 var configs config.Config
 
-func NewAuthController(repo irepository.AuthRepoInterface) *AuthController {
-	configs, _ = config.LoadConfig()
-	return &AuthController{repo: repo}
+func NewAuthController(repo irepository.AuthRepoInterface, addressRepo irepository.AddressRepoInterface) *AuthController {
+	configs, _ = config.LoadConfig(".")
+	return &AuthController{repo: repo, addressRepo: addressRepo}
 }
 
 func (cont AuthController) Register(ctx *gin.Context) {
@@ -30,6 +31,37 @@ func (cont AuthController) Register(ctx *gin.Context) {
 			gin.H{
 				"status":  "fail",
 				"message": err.Error(),
+			},
+		)
+		return
+	}
+
+	cityId, err := cont.addressRepo.GetCityByName(userInput.Address.City.CityName)
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"status":  "fail",
+				"message": "failed to find city with this name in Database",
+			},
+		)
+		return
+	}
+
+	address := &models.Address{
+		PostCode: userInput.Address.PostCode,
+		CityId:   cityId.ID,
+	}
+
+	err = cont.addressRepo.CreateAddress(address)
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			gin.H{
+				"status":  "fail",
+				"message": "failed to find city with this name in Database",
 			},
 		)
 		return
@@ -52,7 +84,7 @@ func (cont AuthController) Register(ctx *gin.Context) {
 		Name:           userInput.Name,
 		Surname:        userInput.Surname,
 		Email:          userInput.Email,
-		AddressId:      userInput.Address.ID,
+		AddressId:      address.ID,
 		HashedPassword: hashedPassword,
 	}
 
@@ -141,11 +173,13 @@ func (cont AuthController) SignIn(ctx *gin.Context) {
 	ctx.SetCookie("refresh_token", refreshToken, 100*60, "/", "localhost", false, true)
 	ctx.SetCookie("logged_in", "true", 20*60, "/", "localhost", false, false)
 
+	address, _ := cont.addressRepo.GetAddressById(user.AddressId)
+
 	currentUser := &models.UserResponse{
 		ID:       user.ID,
 		Name:     user.Name,
 		Surname:  user.Surname,
-		Address:  user.Address,
+		Address:  *address,
 		Email:    user.Email,
 		UserType: user.UserType,
 	}

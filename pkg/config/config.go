@@ -25,19 +25,19 @@ type Config struct {
 	AdminPassword string `mapstructure:"ADMIN_PASSWORD"`
 }
 
-func LoadConfig() (Config, error) {
-	var config Config
-
-	viper.AddConfigPath(".")
+func LoadConfig(path string) (config Config, err error) {
+	viper.AddConfigPath(path)
+	viper.SetConfigName("app")
 	viper.SetConfigType("env")
+
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err != nil {
-		return config, err
+	if err = viper.ReadInConfig(); err != nil {
+		return
 	}
 
-	err := viper.Unmarshal(&config)
+	err = viper.Unmarshal(&config)
 
-	return config, err
+	return
 
 }
