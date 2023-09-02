@@ -8,4 +8,6 @@ type MarketRepoInterface interface {
 	DeleteProduct(id int) error
 	DeleteAll() error
 	UpdateProduct(product *models.Product) error
+	GetCategoryByName(name string) (int, error)
+	GetAllProducts() ([]models.Product, error)
 }

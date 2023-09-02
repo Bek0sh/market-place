@@ -10,6 +10,13 @@ func AuthRoutes(cont controllers.AuthController, router *gin.Engine) {
 
 	router.POST("auth/register/", cont.Register)
 	router.POST("auth/sign-in/", cont.SignIn)
-	router.GET("user/profile", middleware.CheckUser(), cont.Profile)
-	router.GET("user/logout", middleware.CheckUser(), cont.Logout)
+	router.GET("/profile", middleware.CheckUser(), cont.Profile)
+	router.GET("/logout", middleware.CheckUser(), cont.Logout)
+}
+
+func MarketRoutes(cont controllers.ProductController, router *gin.Engine) {
+	router.POST("market/create", middleware.CheckUser(), cont.CreateProduct)
+	router.GET("market/:id", cont.GetProductById)
+	router.GET("market/", cont.GetAllProducts)
+	router.DELETE("market/delete/:id", cont.DeleteProduct)
 }

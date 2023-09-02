@@ -11,13 +11,13 @@ type User struct {
 }
 
 type UserResponse struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
-	UserType  string  `json:"user_type"`
-	Surname   string  `json:"surname"`
-	Email     string  `json:"email"`
-	Address   Address `json:"address"`
-	AddressId int
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	UserType string `json:"user_type"`
+	Surname  string `json:"surname"`
+	Email    string `json:"email"`
+	PostCode int    `json:"postcode"`
+	CityName string `json:"city_name"`
 }
 
 type UserRegister struct {

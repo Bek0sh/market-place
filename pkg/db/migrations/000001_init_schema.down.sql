@@ -1,6 +1,6 @@
-drop table user;
-drop table product;
-drop table address;
+drop table products;
+drop table users;
+drop table addresses;
 drop table category;
-drop table city;
-drop table country;
+drop table cities;
+drop table countries;

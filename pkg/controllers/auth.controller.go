@@ -3,23 +3,17 @@ package controllers
 import (
 	"net/http"
 
-	"github.com/Bek0sh/market-place/pkg/config"
 	"github.com/Bek0sh/market-place/pkg/models"
-	"github.com/Bek0sh/market-place/pkg/repository/irepository"
-	"github.com/Bek0sh/market-place/pkg/utils"
+	"github.com/Bek0sh/market-place/pkg/service/iservice"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthController struct {
-	repo        irepository.AuthRepoInterface
-	addressRepo irepository.AddressRepoInterface
+	service iservice.AuthServiceInterface
 }
 
-var configs config.Config
-
-func NewAuthController(repo irepository.AuthRepoInterface, addressRepo irepository.AddressRepoInterface) *AuthController {
-	configs, _ = config.LoadConfig(".")
-	return &AuthController{repo: repo, addressRepo: addressRepo}
+func NewAuthController(service iservice.AuthServiceInterface) *AuthController {
+	return &AuthController{service: service}
 }
 
 func (cont AuthController) Register(ctx *gin.Context) {
@@ -36,67 +30,11 @@ func (cont AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	cityId, err := cont.addressRepo.GetCityByName(userInput.Address.City.CityName)
+	id, err := cont.service.Register(&userInput)
 
 	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
-			gin.H{
-				"status":  "fail",
-				"message": "failed to find city with this name in Database",
-			},
-		)
-		return
-	}
-
-	address := &models.Address{
-		PostCode: userInput.Address.PostCode,
-		CityId:   cityId.ID,
-	}
-
-	err = cont.addressRepo.CreateAddress(address)
-
-	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
-			gin.H{
-				"status":  "fail",
-				"message": "failed to find city with this name in Database",
-			},
-		)
-		return
-	}
-
-	hashedPassword, err := utils.HashPassword(userInput.Password)
-
-	if err != nil || userInput.Password != userInput.ConfirmPassword {
 		ctx.AbortWithStatusJSON(
 			http.StatusBadRequest,
-			gin.H{
-				"status":  "fail",
-				"message": err.Error(),
-			},
-		)
-		return
-	}
-
-	user := &models.User{
-		Name:           userInput.Name,
-		Surname:        userInput.Surname,
-		Email:          userInput.Email,
-		AddressId:      address.ID,
-		HashedPassword: hashedPassword,
-	}
-
-	if userInput.Email == configs.AdminEmail && userInput.Password == configs.AdminPassword {
-		user.UserType = "ADMIN"
-	}
-
-	id, err := cont.repo.CreateUser(user)
-
-	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
 			gin.H{
 				"status":  "fail",
 				"message": err.Error(),
@@ -128,35 +66,7 @@ func (cont AuthController) SignIn(ctx *gin.Context) {
 		return
 	}
 
-	user, err := cont.repo.GetUserByEmail(userInput.Email)
-
-	passwordMatch := utils.CheckPassword(userInput.Password, user.HashedPassword)
-
-	if err != nil || passwordMatch != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			gin.H{
-				"status":  "fail",
-				"message": err.Error(),
-			},
-		)
-		return
-	}
-
-	accessToken, err := utils.CreateToken(configs.AccessTokenExpiresIn, user.ID, configs.AccessTokenPrivateKey)
-
-	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			gin.H{
-				"status":  "fail",
-				"message": err.Error(),
-			},
-		)
-		return
-	}
-
-	refreshToken, err := utils.CreateToken(configs.RefreshTokenExpiresIn, user.ID, configs.RefreshTokenPrivateKey)
+	accessToken, refreshToken, err := cont.service.SignIn(&userInput)
 
 	if err != nil {
 		ctx.AbortWithStatusJSON(
@@ -172,19 +82,6 @@ func (cont AuthController) SignIn(ctx *gin.Context) {
 	ctx.SetCookie("access_token", accessToken, 20*60, "/", "localhost", false, true)
 	ctx.SetCookie("refresh_token", refreshToken, 100*60, "/", "localhost", false, true)
 	ctx.SetCookie("logged_in", "true", 20*60, "/", "localhost", false, false)
-
-	address, _ := cont.addressRepo.GetAddressById(user.AddressId)
-
-	currentUser := &models.UserResponse{
-		ID:       user.ID,
-		Name:     user.Name,
-		Surname:  user.Surname,
-		Address:  *address,
-		Email:    user.Email,
-		UserType: user.UserType,
-	}
-
-	ctx.Set("current_user", currentUser)
 
 	ctx.JSON(
 		http.StatusOK,
@@ -210,7 +107,19 @@ func (cont AuthController) Logout(ctx *gin.Context) {
 }
 
 func (cont AuthController) Profile(ctx *gin.Context) {
-	currentUser := ctx.MustGet("current_user")
+	userId := ctx.MustGet("user_id")
+	currentUser, err := cont.service.GetUserById(int(userId.(float64)))
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			gin.H{
+				"status":  "fail",
+				"message": err.Error(),
+			},
+		)
+		return
+	}
 
 	ctx.JSON(
 		http.StatusOK,

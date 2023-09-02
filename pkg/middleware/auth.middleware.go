@@ -18,9 +18,9 @@ func CheckUser() gin.HandlerFunc {
 
 		fields := strings.Fields(header)
 
-		if len(fields) != 0 || fields[0] == "Bearer" {
+		if len(fields) != 0 && fields[0] == "Bearer" {
 			accessToken = fields[0]
-		} else if err != nil {
+		} else if err == nil {
 			accessToken = token
 		}
 
@@ -29,7 +29,7 @@ func CheckUser() gin.HandlerFunc {
 				http.StatusUnauthorized,
 				gin.H{
 					"status":  "fail",
-					"message": "You are not logged in",
+					"message": "you are not logged in",
 				},
 			)
 			return
@@ -37,19 +37,20 @@ func CheckUser() gin.HandlerFunc {
 
 		config, _ := config.LoadConfig(".")
 
-		_, err = utils.VerifyToken(accessToken, config.AccessTokenPublicKey)
+		id, err := utils.VerifyToken(accessToken, config.AccessTokenPublicKey)
 
 		if err != nil {
 			ctx.AbortWithStatusJSON(
 				http.StatusUnauthorized,
 				gin.H{
 					"status":  "fail",
-					"message": "Access token is not valid",
+					"message": err.Error(),
 				},
 			)
 			return
 		}
 
+		ctx.Set("user_id", id)
 		ctx.Next()
 
 	}

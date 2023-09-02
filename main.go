@@ -9,6 +9,8 @@ import (
 	"github.com/Bek0sh/market-place/pkg/repository"
 	"github.com/Bek0sh/market-place/pkg/repository/irepository"
 	"github.com/Bek0sh/market-place/pkg/routes"
+	"github.com/Bek0sh/market-place/pkg/service"
+	"github.com/Bek0sh/market-place/pkg/service/iservice"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,8 +18,12 @@ var authRepo irepository.AuthRepoInterface
 var addressRepo irepository.AddressRepoInterface
 var marketRepo irepository.MarketRepoInterface
 
+var authService iservice.AuthServiceInterface
+var marketService iservice.MarketServiceInterface
+
 var authCont controllers.AuthController
 var addressCont controllers.AddressController
+var marketCont controllers.ProductController
 
 func init() {
 	cfg, err := config.LoadConfig(".")
@@ -32,7 +38,11 @@ func init() {
 	addressRepo = repository.NewAddressRepository(db.DB)
 	marketRepo = repository.NewMarketRepository(db.DB)
 
-	authCont = *controllers.NewAuthController(authRepo, addressRepo)
+	authService = service.NewAuthService(authRepo, addressRepo)
+	marketService = service.NewMarketService(marketRepo)
+
+	authCont = *controllers.NewAuthController(authService)
+	marketCont = *controllers.NewProductController(marketService)
 	addressCont = *controllers.NewAddressController(addressRepo)
 }
 
@@ -40,6 +50,7 @@ func main() {
 	router := gin.Default()
 
 	routes.AuthRoutes(authCont, router)
+	routes.MarketRoutes(marketCont, router)
 
 	panic(router.Run(":8080"))
 }
